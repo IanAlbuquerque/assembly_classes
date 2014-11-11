@@ -8,7 +8,7 @@ run: compile
 	
 asm:
 	clear
-	gcc -Wall -c -m32 asm.s
+	gcc -Wall -c asm.s
 	objdump -d asm.o
 	rm asm.o
 	
