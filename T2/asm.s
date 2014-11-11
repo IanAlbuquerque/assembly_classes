@@ -52,5 +52,17 @@ main:
 	subl $0xabcdef,%eax;
 	imull $0xabcdef,%eax;
 
+	movl -4(%ebp),%eax;
+	movl -8(%ebp),%eax;
+	movl -12(%ebp),%eax;
+	movl -16(%ebp),%eax;
+	movl -20(%ebp),%eax;
+
+	movl $0,-4(%ebp);
+	movl $0,-8(%ebp);
+	movl $0,-12(%ebp);
+	movl $0,-16(%ebp);
+	movl $0,-20(%ebp);
+
 
 

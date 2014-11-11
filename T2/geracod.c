@@ -61,7 +61,7 @@ int computeReturnConst(FILE* f, byte* codigo,int byte_atual)
 	return byte_atual;
 }
 
-int valorSubtrairEbp(FILE* f, int* used_vs, int* amount_used_vs, int var_num)
+int valorSubtrairEbp(FILE* f, int* used_vs, int* amount_used_vs, int var_num, byte* codigo, int* byte_atual)
 {
 	int var_index;
 	var_index = search(used_vs,*amount_used_vs,var_num);
@@ -77,6 +77,18 @@ int valorSubtrairEbp(FILE* f, int* used_vs, int* amount_used_vs, int var_num)
 			used_vs[*amount_used_vs] = var_num;
 			var_index=*amount_used_vs;
 			(*amount_used_vs)++;
+
+			// Inicializa Variáveis Não Atribuídas Antes como Zero
+			// movl $0,-valor_subtrair_ebp(%ebp)
+			codigo[*byte_atual] = 0xC7;
+			codigo[*byte_atual+1] = 0x45; 
+			codigo[*byte_atual+2] = ~(((byte)MAX_VARS - (byte)var_index)*4) + 1;
+			codigo[*byte_atual+3] = 0; 
+			codigo[*byte_atual+4] = 0; 
+			codigo[*byte_atual+5] = 0; 
+			codigo[*byte_atual+6] = 0; 
+			printCodigo(codigo,*byte_atual,7);
+			*byte_atual += 7;
 		}
 	}
 	return ((byte)MAX_VARS - (byte)var_index)*4;
@@ -85,7 +97,7 @@ int valorSubtrairEbp(FILE* f, int* used_vs, int* amount_used_vs, int var_num)
 int computeReturnVar(FILE* f, byte* codigo, int byte_atual, int* used_vs, int* amount_used_vs, int var_num)
 {
 	byte valor_subtrair_ebp;
-	valor_subtrair_ebp = valorSubtrairEbp(f,used_vs,amount_used_vs,var_num);
+	valor_subtrair_ebp = valorSubtrairEbp(f,used_vs,amount_used_vs,var_num,codigo,&byte_atual);
 
 	// movl -valor_subtrair_ebp(%ebp),%eax
 	codigo[byte_atual] = 0x8B;
@@ -117,7 +129,7 @@ int computeReturnVar(FILE* f, byte* codigo, int byte_atual, int* used_vs, int* a
 int computeAttConst(FILE* f, byte* codigo, int byte_atual, int* used_vs, int* amount_used_vs, int var_num)
 {
 	byte valor_subtrair_ebp;
-	valor_subtrair_ebp = valorSubtrairEbp(f,used_vs,amount_used_vs,var_num);
+	valor_subtrair_ebp = valorSubtrairEbp(f,used_vs,amount_used_vs,var_num,codigo,&byte_atual);
 	
 	// movl $valor,-valor_subtrair_ebp(%ebp)
 	codigo[byte_atual] = 0xC7;
@@ -132,7 +144,7 @@ int computeAttConst(FILE* f, byte* codigo, int byte_atual, int* used_vs, int* am
 }
 */
 
-int computeFirstSumConst(FILE* f, byte* codigo, int byte_atual, int* used_vs, int* amount_used_vs, int var_num)
+int computeFirstOperationConst(FILE* f, byte* codigo, int byte_atual)
 {
 	// movl $valor,%eax
 	codigo[byte_atual] = 0xB8;
@@ -143,11 +155,30 @@ int computeFirstSumConst(FILE* f, byte* codigo, int byte_atual, int* used_vs, in
 
 	return byte_atual;
 }
-
-int computeSecondSumConst(FILE* f, byte* codigo, int byte_atual, int* used_vs, int* amount_used_vs, int var_num, char operacao)
+int computeFirstOperationVar(FILE* f, byte* codigo, int byte_atual, int* used_vs, int* amount_used_vs)
 {
 	byte valor_subtrair_ebp;
-	valor_subtrair_ebp = valorSubtrairEbp(f,used_vs,amount_used_vs,var_num);
+	int var_num;
+
+	fscanf(f," %d", &var_num);
+	printf("%d", var_num);
+
+	valor_subtrair_ebp = valorSubtrairEbp(f,used_vs,amount_used_vs,var_num,codigo,&byte_atual);
+
+	// movl -valor_subtrair_ebp(%eax),%eax
+	codigo[byte_atual] = 0x8B;
+	codigo[byte_atual+1] = 0x45;
+	codigo[byte_atual+2] = ~valor_subtrair_ebp+1;
+	printCodigo(codigo,byte_atual,3);
+	byte_atual += 3;
+
+	return byte_atual;
+}
+
+int computeSecondOperationConst(FILE* f, byte* codigo, int byte_atual, int* used_vs, int* amount_used_vs, int var_num, char operacao)
+{
+	byte valor_subtrair_ebp;
+	valor_subtrair_ebp = valorSubtrairEbp(f,used_vs,amount_used_vs,var_num,codigo,&byte_atual);
 	
 	if(operacao == '+')
 	{
@@ -176,6 +207,11 @@ int computeSecondSumConst(FILE* f, byte* codigo, int byte_atual, int* used_vs, i
 		printf("[%d]\n",codigo[byte_atual+2]);
 		printCodigo(codigo,byte_atual,6);
 		byte_atual += 6;
+	}
+	else
+	{
+		printf("Error: invalid operator '%c'.\n",operacao);
+		exit(1);
 	}
 
 	//movl %eax,-valor_subtrair_ebp(%ebp)
@@ -264,11 +300,11 @@ funcp geracod (FILE *f)
 			{
 				// Atribuição de Constantes a Variáveis única
 				// byte_atual = computeAttConst(f,codigo,byte_atual,used_vs,&amount_used_vs,var_num);
-				byte_atual = computeFirstSumConst(f,codigo,byte_atual,used_vs,&amount_used_vs,var_num);
+				byte_atual = computeFirstOperationConst(f,codigo,byte_atual);
 			}
 			else if(char_lido == 'v')
 			{
-				printf("encontrou v");
+				byte_atual = computeFirstOperationVar(f,codigo,byte_atual,used_vs,&amount_used_vs);
 			}
 			else
 			{
@@ -283,7 +319,7 @@ funcp geracod (FILE *f)
 			printf(" %c",char_lido);
 			if(char_lido == '$')
 			{
-				byte_atual = computeSecondSumConst(f,codigo,byte_atual,used_vs,&amount_used_vs,var_num,operacao);
+				byte_atual = computeSecondOperationConst(f,codigo,byte_atual,used_vs,&amount_used_vs,var_num,operacao);
 			}
 			else if(char_lido == 'v')
 			{
