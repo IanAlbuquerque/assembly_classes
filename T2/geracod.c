@@ -64,6 +64,7 @@ int computeReturnConst(FILE* f, byte* codigo,int byte_atual)
 int valorSubtrairEbp(FILE* f, int* used_vs, int* amount_used_vs, int var_num, byte* codigo, int* byte_atual)
 {
 	int var_index;
+	int i;
 	var_index = search(used_vs,*amount_used_vs,var_num);
 	if(var_index == -1)
 	{
@@ -77,6 +78,13 @@ int valorSubtrairEbp(FILE* f, int* used_vs, int* amount_used_vs, int var_num, by
 			used_vs[*amount_used_vs] = var_num;
 			var_index=*amount_used_vs;
 			(*amount_used_vs)++;
+
+			printf("ATENCAO V%d NUNCA FOI USADO\n",var_num);
+			for (i = 0; i < 5; ++i)
+			{
+				printf("[%d]",used_vs[i]);
+			}
+			printf("\n");
 
 			// Inicializa Variáveis Não Atribuídas Antes como Zero
 			// movl $0,-valor_subtrair_ebp(%ebp)
@@ -225,6 +233,63 @@ int computeSecondOperationConst(FILE* f, byte* codigo, int byte_atual, int* used
 	return byte_atual;
 }
 
+int computeSecondOperationVar(FILE* f, byte* codigo, int byte_atual, int* used_vs, int* amount_used_vs, int var_num, char operacao)
+{
+	byte valor_subtrair_ebp_dest;
+	byte valor_subtrair_ebp_direita;
+	int var_num_dir;
+
+	fscanf(f," %d", &var_num_dir);
+	printf("%d", var_num_dir);
+
+	valor_subtrair_ebp_dest = valorSubtrairEbp(f,used_vs,amount_used_vs,var_num,codigo,&byte_atual);
+	valor_subtrair_ebp_direita = valorSubtrairEbp(f,used_vs,amount_used_vs,var_num_dir,codigo,&byte_atual);
+	
+	if(operacao == '+')
+	{
+		// addl -valor_subtrair_ebp_direita(%ebp),%eax
+		codigo[byte_atual] = 0x03;
+		codigo[byte_atual+1] = 0x45;
+		codigo[byte_atual+2] = ~valor_subtrair_ebp_direita + 1;
+		printCodigo(codigo,byte_atual,3);
+		byte_atual += 3;
+	}
+	else if(operacao == '-')
+	{
+		// subl -valor_subtrair_ebp_direita(%ebp),%eax
+		codigo[byte_atual] = 0x2B;
+		codigo[byte_atual+1] = 0x45;
+		codigo[byte_atual+2] = ~valor_subtrair_ebp_direita + 1;
+		printCodigo(codigo,byte_atual,3);
+		byte_atual += 3;
+	}
+	else if(operacao == '*')
+	{
+		// imull -valor_subtrair_ebp_direita(%ebp),%eax
+		codigo[byte_atual] = 0x0F;
+		codigo[byte_atual+1] = 0xAF;
+		codigo[byte_atual+2] = 0x45;
+		codigo[byte_atual+3] = ~valor_subtrair_ebp_direita + 1;
+		printCodigo(codigo,byte_atual,4);
+		byte_atual += 4;
+	}
+	else
+	{
+		printf("Error: invalid operator '%c'.\n",operacao);
+		exit(1);
+	}
+
+	//movl %eax,-valor_subtrair_ebp(%ebp)
+	codigo[byte_atual] = 0x89;
+	codigo[byte_atual+1] = 0x45;
+	codigo[byte_atual+2] = ~valor_subtrair_ebp_dest + 1;
+	printCodigo(codigo,byte_atual,3);
+	byte_atual += 3;
+
+
+	return byte_atual;
+}
+
 int addCabecalho(FILE* f, byte* codigo, int byte_atual)
 {
 	//pushl %ebp
@@ -323,7 +388,7 @@ funcp geracod (FILE *f)
 			}
 			else if(char_lido == 'v')
 			{
-				printf("encontrou v");
+				byte_atual = computeSecondOperationVar(f,codigo,byte_atual,used_vs,&amount_used_vs,var_num,operacao);
 			}
 			else
 			{

@@ -64,5 +64,23 @@ main:
 	movl $0,-16(%ebp);
 	movl $0,-20(%ebp);
 
+	addl -4(%ebp),%eax;
+	addl -8(%ebp),%eax;
+	addl -12(%ebp),%eax;
+	addl -16(%ebp),%eax;
+	addl -20(%ebp),%eax;
+
+	subl -4(%ebp),%eax;
+	subl -8(%ebp),%eax;
+	subl -12(%ebp),%eax;
+	subl -16(%ebp),%eax;
+	subl -20(%ebp),%eax;
+
+	imull -4(%ebp),%eax;
+	imull -8(%ebp),%eax;
+	imull -12(%ebp),%eax;
+	imull -16(%ebp),%eax;
+	imull -20(%ebp),%eax;
+
 
 
