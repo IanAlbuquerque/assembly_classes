@@ -4,7 +4,6 @@
 
 funcp code;
 	
-	
 int main(int argn, char* argc[])
 {
 	FILE* input_file;
