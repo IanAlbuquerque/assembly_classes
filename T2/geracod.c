@@ -9,6 +9,14 @@
 
 typedef unsigned char byte;
 
+union value
+{
+	int i;
+	byte b[4];
+};
+
+typedef union value Value;
+
 int search(int* v, int n, int x)
 {
 	int i;
@@ -60,8 +68,6 @@ int computeReturnConst(FILE* f, byte* codigo,int byte_atual)
 
 	return byte_atual;
 }
-
-
 
 int valorSubtrairEbp(FILE* f, int* used_vs, int* amount_used_vs, int var_num, byte* codigo, int* byte_atual)
 {
@@ -160,6 +166,34 @@ int computeAttConst(FILE* f, byte* codigo, int byte_atual, int* used_vs, int* am
 	return byte_atual;
 }
 */
+
+int computeFirstOperation(byte* codigo, int byte_atual, int* used_vs, int* amount_used_vs, char simbolo, Value valor_simbolo)
+{
+	if(simbolo == '$')
+	{
+		// movl $valor,%eax
+		codigo[byte_atual] = 0xB8;
+		codigo[byte_atual+1] = valor_simbolo.b[0];
+		codigo[byte_atual+2] = valor_simbolo.b[1];
+		codigo[byte_atual+3] = valor_simbolo.b[2];
+		codigo[byte_atual+4] = valor_simbolo.b[3];
+		printf("%d\n",valor_simbolo.i);
+		printCodigo(codigo,byte_atual,5);
+		byte_atual += 5;
+	}
+	else if(simbolo == 'v' || simbolo == 'p')
+	{
+		// movl valor(%ebp),%eax
+		codigo[byte_atual] = 0x8B;
+		codigo[byte_atual+1] = 0x45;
+		if(simbolo == 'v') codigo[byte_atual+2] = ~valorSubtrairEbp(NULL,used_vs,amount_used_vs,valor_simbolo.i,codigo,&byte_atual)+1;
+		else codigo[byte_atual+2] = valorAdicionarEbp(valor_simbolo.i);
+		printCodigo(codigo,byte_atual,3);
+		byte_atual += 3;
+	}
+
+	return byte_atual;
+}
 
 int computeFirstOperationConst(FILE* f, byte* codigo, int byte_atual)
 {
@@ -403,6 +437,8 @@ int addCabecalho(FILE* f, byte* codigo, int byte_atual)
 funcp geracod (FILE *f)
 {
 	byte* codigo;
+	int local_linha[51];
+	int linha_atual;
 	
 	int var_num;
 	
@@ -410,10 +446,12 @@ funcp geracod (FILE *f)
 	int amount_used_vs = 0;
 	
 	char char_lido;
+	Value valor_lido;
 	char operacao;
 	int byte_atual = 0;
 	
 	codigo = malloc(50*TAM_MAIOR_INSTRUCAO);
+
 	if(codigo == NULL)
 	{
 		printf("Code Area Allocation Error\n");
@@ -422,10 +460,18 @@ funcp geracod (FILE *f)
 	
 	byte_atual = addCabecalho(f,codigo,byte_atual);
 	
+	linha_atual = 0;
 	while(fscanf(f," %c",&char_lido)==1)
 	{
 		printf("%c",char_lido);
-		if(char_lido == 'r')
+		linha_atual++;
+		local_linha[linha_atual] = byte_atual;
+		if(char_lido == 'i')
+		{
+			//ifeq
+			exit(1);
+		}
+		else if(char_lido == 'r')
 		{
 			fscanf(f,"et %c",&char_lido);
 			printf("et %c",char_lido);
@@ -449,8 +495,9 @@ funcp geracod (FILE *f)
 		{
 			fscanf(f," %d",&var_num);
 			printf("%d",var_num);
-			fscanf(f," := %c",&char_lido);
-			printf(" := %c",char_lido);
+			fscanf(f," := %c%d",&char_lido,(int*) valor_lido.b);
+			printf(" := %c%d",char_lido,valor_lido.i);
+			/*
 			if(char_lido == '$')
 			{
 				// Atribuição de Constantes a Variáveis única
@@ -461,14 +508,19 @@ funcp geracod (FILE *f)
 			{
 				byte_atual = computeFirstOperationVar(f,codigo,byte_atual,used_vs,&amount_used_vs);
 			}
-			/* NOVO NEW NOUVEAU*/
 			else if(char_lido == 'p')
 			{
 				printf("!!!!!!!!chegou aqui");
 				byte_atual = computeFirstOperationParam( f,codigo , byte_atual );
 				
 			}
+			*/
+
 			/* NOVO NEW NOUVEAU*/
+			if(char_lido == '$' || char_lido == 'v' || char_lido == 'p')
+			{
+				byte_atual = computeFirstOperation(codigo, byte_atual, used_vs, &amount_used_vs, char_lido, valor_lido);
+			}
 			else
 			{
 				printf("Error: invalid symbol after ':=' found.\n");
