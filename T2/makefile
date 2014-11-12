@@ -1,6 +1,6 @@
 compile:
 	clear
-	gcc -Wall -Wa,--execstack -m32 -o mincc main.c geracod.c
+	gcc -Wall -g -Wa,--execstack -m32 -o mincc main.c geracod.c
 	
 run: compile
 	clear

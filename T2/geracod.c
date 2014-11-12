@@ -7,6 +7,14 @@
 
 //typedef int (*funcp) ();
 
+struct jumpReference
+{
+	int byte_to_write;
+	int jump_line_dest;
+};
+
+typedef struct jumpReference JumpReference;
+
 typedef unsigned char byte;
 
 union value
@@ -418,18 +426,79 @@ int addCabecalho(FILE* f, byte* codigo, int byte_atual)
 {
 	//pushl %ebp
 	codigo[byte_atual] = 0x55;
+	printCodigo(codigo,byte_atual,1);
 	byte_atual+=1;
 	
 	//movl %esp, %ebp
 	codigo[byte_atual] = 0x89;
 	codigo[byte_atual+1] = 0xE5;
+	printCodigo(codigo,byte_atual,2);
 	byte_atual+=2;
 	
 	// subl $20,%esp;
 	codigo[byte_atual] = 0x83;
 	codigo[byte_atual+1] = 0xEC;
 	codigo[byte_atual+2] = 0x14;
+	printCodigo(codigo,byte_atual,3);
 	byte_atual+=3;
+
+	return byte_atual;
+}
+
+int computeIfEq(byte* codigo, int byte_atual, int* used_vs, int* amount_used_vs, char char1, Value v1, char char2, Value v2, JumpReference ref_jump[], int linha, int linha_atual)
+{
+	if(char1 == '$')
+	{
+		// movl $valor,%eax
+		codigo[byte_atual] = 0xB8;
+		codigo[byte_atual+1] = v1.b[0];
+		codigo[byte_atual+2] = v1.b[1];
+		codigo[byte_atual+3] = v1.b[2];
+		codigo[byte_atual+4] = v1.b[3];
+		printf("%d\n",v1.i);
+		printCodigo(codigo,byte_atual,5);
+		byte_atual += 5;
+	}
+	else if(char1 == 'v' || char1 == 'p')
+	{
+		// movl valor(%ebp),%eax
+		codigo[byte_atual] = 0x8B;
+		codigo[byte_atual+1] = 0x45;
+		if(char1 == 'v') codigo[byte_atual+2] = ~valorSubtrairEbp(NULL,used_vs,amount_used_vs,v1.i,codigo,&byte_atual)+1;
+		else codigo[byte_atual+2] = valorAdicionarEbp(v1.i);
+		printCodigo(codigo,byte_atual,3);
+		byte_atual += 3;
+	}
+
+	if(char2 == '$')
+	{
+		// movl $valor,%eax
+		codigo[byte_atual] = 0x3D;
+		codigo[byte_atual+1] = v2.b[0];
+		codigo[byte_atual+2] = v2.b[1];
+		codigo[byte_atual+3] = v2.b[2];
+		codigo[byte_atual+4] = v2.b[3];
+		printf("%d\n",v2.i);
+		printCodigo(codigo,byte_atual,5);
+		byte_atual += 5;
+	}
+	else if(char2 == 'v' || char2 == 'p')
+	{
+		// movl valor(%ebp),%eax
+		codigo[byte_atual] = 0x3B;
+		codigo[byte_atual+1] = 0x45;
+		if(char2 == 'v') codigo[byte_atual+2] = ~valorSubtrairEbp(NULL,used_vs,amount_used_vs,v2.i,codigo,&byte_atual)+1;
+		else codigo[byte_atual+2] = valorAdicionarEbp(v2.i);
+		printCodigo(codigo,byte_atual,3);
+		byte_atual += 3;
+	}
+
+	codigo[byte_atual] = 0x0F;
+	codigo[byte_atual+1] = 0x84;
+	ref_jump[linha_atual].byte_to_write = byte_atual+2;
+	ref_jump[linha_atual].jump_line_dest = linha;
+	printCodigo(codigo,byte_atual,6);
+	byte_atual+=6;
 
 	return byte_atual;
 }
@@ -438,7 +507,10 @@ funcp geracod (FILE *f)
 {
 	byte* codigo;
 	int local_linha[51];
+	JumpReference ref_jump[51];
 	int linha_atual;
+
+	int i;
 	
 	int var_num;
 	
@@ -449,7 +521,19 @@ funcp geracod (FILE *f)
 	Value valor_lido;
 	char operacao;
 	int byte_atual = 0;
+
+	char char1, char2;
+	Value v1, v2;
+	int linha;
+
+	Value line_diference;
 	
+	for(i=0;i<51;i++)
+	{
+		ref_jump[i].byte_to_write = -1;
+		ref_jump[i].jump_line_dest = -1;
+	}
+
 	codigo = malloc(50*TAM_MAIOR_INSTRUCAO);
 
 	if(codigo == NULL)
@@ -466,10 +550,12 @@ funcp geracod (FILE *f)
 		printf("%c",char_lido);
 		linha_atual++;
 		local_linha[linha_atual] = byte_atual;
+		printf("Linha %d esta no byte %d\n",linha_atual,local_linha[linha_atual]);
 		if(char_lido == 'i')
 		{
-			//ifeq
-			exit(1);
+			fscanf(f,"feq %c%d %c%d %d",&char1,&(v1.i),&char2,&(v2.i),&linha);
+			printf("feq %c%d %c%d %d\n",char1,v1.i,char2,v2.i,linha);
+			byte_atual = computeIfEq(codigo, byte_atual, used_vs, &amount_used_vs, char1, v1, char2, v2, ref_jump, linha, linha_atual);
 		}
 		else if(char_lido == 'r')
 		{
@@ -556,6 +642,22 @@ funcp geracod (FILE *f)
 			exit(1);
 		}
 	}
+
+	for(i=0;i<51;i++)
+	{
+		if(ref_jump[i].byte_to_write != -1)
+		{
+			printf("Atualizando JUMPS\n");
+			line_diference.i = local_linha[ref_jump[i].jump_line_dest] - (ref_jump[i].byte_to_write+4);
+			printCodigo(codigo,ref_jump[i].byte_to_write-2,6);
+			codigo[ref_jump[i].byte_to_write] = line_diference.b[0];
+			codigo[ref_jump[i].byte_to_write+1] = line_diference.b[1];
+			codigo[ref_jump[i].byte_to_write+2] = line_diference.b[2];
+			codigo[ref_jump[i].byte_to_write+3] = line_diference.b[3];
+			printCodigo(codigo,ref_jump[i].byte_to_write-2,6);
+		}
+	}
+
 	return (funcp) codigo;
 }
 
