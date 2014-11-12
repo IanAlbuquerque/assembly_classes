@@ -464,9 +464,8 @@ funcp geracod (FILE *f)
 			/* NOVO NEW NOUVEAU*/
 			else if(char_lido == 'p')
 			{
-				printf("!!!!!!!!chegou aqui");
 				byte_atual = computeFirstOperationParam( f,codigo , byte_atual );
-				
+				printf("!!!!!!!!chegou aqui");
 			}
 			/* NOVO NEW NOUVEAU*/
 			else

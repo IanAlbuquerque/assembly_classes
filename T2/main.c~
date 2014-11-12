@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "geracod.h"
-#include <string.h>
+
 funcp code;
 	
 	
@@ -23,8 +23,8 @@ int main(int argn, char* argc[])
 		exit(1);
 	}
 	
-	param[0] = atoi(argc[2]);
-	param[1] = atoi(argc[3]);
+	param[0] = (int) argc[2][0];
+	param[1] = (int) argc[3][0];
 	
 	printf("%d %d\n\n",param[0],param[1]);
 	code = geracod(input_file);
