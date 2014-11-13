@@ -136,4 +136,6 @@ GO2:
 	movl %ebp, %esp
 	popl %ebp
 	ret
+
+	subl $0xabcdef,%esp
 	

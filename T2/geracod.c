@@ -28,12 +28,8 @@ static int search(int* array, int size, int value)
 {
 	int i;
 	for(i=0; i<size; i++)
-	{
 		if(value == array[i])
-		{
 			return i;
-		}
-	}
 	return -1;
 }
 
@@ -47,15 +43,240 @@ static void printCodigo(byte* code, int current_byte, int size)
 	printf("\n");
 }
 
+//================================================================================================================================
+
+static int _movl_value_eax(byte* code, int current_byte, Value value)
+{
+	// movl $value, %eax
+	code[current_byte] = 0xB8;
+	code[current_byte+1] = value.b[0];
+	code[current_byte+2] = value.b[1];
+	code[current_byte+3] = value.b[2];
+	code[current_byte+4] = value.b[3];
+	printCodigo(code,current_byte,5);
+	return current_byte + 5;
+}
+
+static int _movl_valueebp_eax(byte* code, int current_byte, byte value)
+{
+	// movl value(%ebp),%eax
+	code[current_byte] = 0x8B;
+	code[current_byte+1] = 0x45;
+	code[current_byte+2] = value;
+	printCodigo(code,current_byte,3);
+	return current_byte + 3;
+}
+
+static int _movl_ebp_esp(byte* code, int current_byte)
+{
+	//movl %ebp, %esp
+	code[current_byte] = 0x89;
+	code[current_byte+1] = 0xEC;
+	printCodigo(code,current_byte,2);
+	return current_byte + 2;
+}
+
+static int _popl_ebp(byte* code, int current_byte)
+{
+	//popl %ebp
+	code[current_byte] = 0x5D;
+	printCodigo(code,current_byte,1);
+	return current_byte + 1;
+}
+
+static int _ret(byte* code, int current_byte)
+{
+	// ret
+	code[current_byte] = 0xC3;
+	printCodigo(code,current_byte,1);
+	return current_byte + 1;
+}
+
+static int _addl_value_eax(byte* code, int current_byte, Value value)
+{
+	// addl $value,%eax
+	code[current_byte] = 0x05;
+	code[current_byte+1] = value.b[0];
+	code[current_byte+2] = value.b[1];
+	code[current_byte+3] = value.b[2];
+	code[current_byte+4] = value.b[3];
+	printCodigo(code,current_byte,5);
+	return current_byte + 5;
+}
+
+static int _subl_value_eax(byte* code, int current_byte, Value value)
+{
+	// subl $value,%eax
+	code[current_byte] = 0x2D;
+	code[current_byte+1] = value.b[0];
+	code[current_byte+2] = value.b[1];
+	code[current_byte+3] = value.b[2];
+	code[current_byte+4] = value.b[3];
+	printCodigo(code,current_byte,5);
+	return current_byte + 5;
+}
+
+static int _imull_value_eax(byte* code, int current_byte, Value value)
+{
+	// imull $value,%eax
+	code[current_byte] = 0x69;
+	code[current_byte+1] = 0xC0;
+	code[current_byte+2] = value.b[0];
+	code[current_byte+3] = value.b[1];
+	code[current_byte+4] = value.b[2];
+	code[current_byte+5] = value.b[3];
+	printCodigo(code,current_byte,6);
+	return current_byte + 6;
+}
+static int _addl_valueebp_eax(byte* code, int current_byte, byte value)
+{
+	// addl value(ebp),%eax
+	code[current_byte] = 0x03;
+	code[current_byte+1] = 0x45;
+	code[current_byte+2] = value;
+	printCodigo(code,current_byte,3);
+	return current_byte + 3;
+}
+
+static int _subl_valueebp_eax(byte* code, int current_byte, byte value)
+{
+	// subl value(ebp),%eax
+	code[current_byte] = 0x2B;
+	code[current_byte+1] = 0x45;
+	code[current_byte+2] = value;
+	printCodigo(code,current_byte,3);
+	return current_byte + 3;
+}
+
+static int _imull_valueebp_eax(byte* code, int current_byte, byte value)
+{
+	// imull value(ebp),%eax
+	code[current_byte] = 0x0F;
+	code[current_byte+1] = 0xAF;
+	code[current_byte+2] = 0x45;
+	code[current_byte+3] = value;
+	printCodigo(code,current_byte,4);
+	return current_byte + 4;
+}
+
+static int _movl_eax_valueebp(byte* code, int current_byte, byte value)
+{
+	// movl %eax, value(%ebp)
+	code[current_byte] = 0x89;
+	code[current_byte+1] = 0x45;
+	code[current_byte+2] = value;
+	printCodigo(code,current_byte,3);
+	return current_byte + 3;
+}
+
+static int _operate_value_eax(byte* code, int current_byte, Value value, char operation_type)
+{
+	if(operation_type == '+')
+		return _addl_value_eax(code, current_byte, value);
+	else if(operation_type == '-')
+		return _subl_value_eax(code, current_byte, value);
+	else if(operation_type == '*')
+		return _imull_value_eax(code, current_byte, value);
+	else
+		return 0;
+}
+
+static int _operate_valueebp_eax(byte* code, int current_byte, byte value, char operation_type)
+{
+	if(operation_type == '+')
+		return _addl_valueebp_eax(code, current_byte, value);
+	else if(operation_type == '-')
+		return _subl_valueebp_eax(code, current_byte, value);
+	else if(operation_type == '*')
+		return _imull_valueebp_eax(code, current_byte, value);
+	else
+		return 0;
+}
+
+static int _pushl_ebp(byte* code, int current_byte)
+{
+	//pushl %ebp
+	code[current_byte] = 0x55;
+
+	printCodigo(code,current_byte,1);
+
+	return current_byte + 1;
+}
+static int _movl_esp_ebp(byte* code, int current_byte)
+{
+	//movl %esp, %ebp
+	code[current_byte] = 0x89;
+	code[current_byte+1] = 0xE5;
+
+	printCodigo(code,current_byte,2);
+
+	return current_byte + 2;
+}
+
+static int _subl_value_esp(byte* code, int current_byte, Value value)
+{
+	// subl $value,%esp;
+	code[current_byte] = 0x81;
+	code[current_byte+1] = 0xEC;
+	code[current_byte+2] = value.b[0];
+	code[current_byte+3] = value.b[1];
+	code[current_byte+4] = value.b[2];
+	code[current_byte+5] = value.b[3];
+
+	printCodigo(code,current_byte,6);
+
+	return current_byte + 6;
+}
+
+static int _cmpl_value_eax(byte* code, int current_byte, Value value)
+{
+	// cmpl $value,%eax
+	code[current_byte] = 0x3D;
+	code[current_byte+1] = value.b[0];
+	code[current_byte+2] = value.b[1];
+	code[current_byte+3] = value.b[2];
+	code[current_byte+4] = value.b[3];
+
+	printCodigo(code,current_byte,5);
+
+	return current_byte + 5;	
+}
+
+static int _cmpl_valueebp_eax(byte* code, int current_byte, byte value)
+{
+	// cmpl value(%ebp),%eax
+	code[current_byte] = 0x3B;
+	code[current_byte+1] = 0x45;
+	code[current_byte+2] = value;
+
+	printCodigo(code,current_byte,3);
+
+	return current_byte + 3;	
+}
+
+static int _je_value(byte* code, int current_byte, Value value)
+{
+	// je value
+	code[current_byte] = 0x0F;
+	code[current_byte+1] = 0x84;
+	code[current_byte+2] = value.b[0];
+	code[current_byte+3] = value.b[1];
+	code[current_byte+4] = value.b[2];
+	code[current_byte+5] = value.b[3];
+
+	printCodigo(code,current_byte,6);
+
+	return current_byte + 6;
+}
+
+//================================================================================================================================
+
 static byte ebpOffsetValue(int indexes_of_used_variables[], int* num_of_used_variables, char variable_type, int variable_index)
 {
 	int index_in_the_array;
 	if(variable_type == 'v')
 	{
-		index_in_the_array = search(indexes_of_used_variables,
-									*num_of_used_variables,
-									variable_index);
-
+		index_in_the_array = search(indexes_of_used_variables, *num_of_used_variables, variable_index);
 		if(index_in_the_array == -1)
 		{
 			if(*num_of_used_variables == MAXIMUM_NUMBER_OF_VARIABLES)
@@ -78,73 +299,12 @@ static byte ebpOffsetValue(int indexes_of_used_variables[], int* num_of_used_var
 	}
 }
 
-static int _movl_value_eax(byte* code, int current_byte, Value value)
-{
-	// movl $value, %eax
-	code[current_byte] = 0xB8;
-	code[current_byte+1] = value.b[0];
-	code[current_byte+2] = value.b[1];
-	code[current_byte+3] = value.b[2];
-	code[current_byte+4] = value.b[3];
-
-	printCodigo(code,current_byte,5);
-
-	return current_byte + 5;
-}
-
-static int _movl_valueebp_eax(byte* code, int current_byte, byte value)
-{
-	// movl valor(%ebp),%eax
-	code[current_byte] = 0x8B;
-	code[current_byte+1] = 0x45;
-	code[current_byte+2] = value;
-
-	printCodigo(code,current_byte,3);
-
-	return current_byte + 3;
-}
-
-static int _movl_ebp_esp(byte* code, int current_byte)
-{
-	//movl %ebp, %esp
-	code[current_byte] = 0x89;
-	code[current_byte+1] = 0xEC;
-
-	printCodigo(code,current_byte,2);
-
-	return current_byte + 2;
-}
-
-static int _popl_ebp(byte* code, int current_byte)
-{
-	//popl %ebp
-	code[current_byte] = 0x5D;
-
-	printCodigo(code,current_byte,1);
-
-	return current_byte + 1;
-}
-
-static int _ret(byte* code, int current_byte)
-{
-	// ret
-	code[current_byte] = 0xC3;
-
-	printCodigo(code,current_byte,1);
-
-	return current_byte + 1;
-}
-
 static int computeReturn(byte* code, int current_byte, int indexes_of_used_variables[], int* num_of_used_variables, char operand_type, Value operand_value)
 {
 	if(operand_type == '$')
-	{
 		current_byte = _movl_value_eax(code, current_byte, operand_value);
-	}
 	else if(operand_type == 'v' || operand_type == 'p')
-	{
 		current_byte = _movl_valueebp_eax(code, current_byte, ebpOffsetValue(indexes_of_used_variables, num_of_used_variables, operand_type, operand_value.i));
-	}
 
 	current_byte = _movl_ebp_esp(code, current_byte);
 	current_byte = _popl_ebp(code, current_byte);
@@ -153,139 +313,35 @@ static int computeReturn(byte* code, int current_byte, int indexes_of_used_varia
 	return current_byte;
 }
 
-static int computeFirstOperation(byte* code, int current_byte, int indexes_of_used_variables[], int* num_of_used_variables, char operand_type, Value operand_value)
-{
-	if(operand_type == '$')
-	{
-		// movl $valor,%eax
-		code[current_byte] = 0xB8;
-		code[current_byte+1] = operand_value.b[0];
-		code[current_byte+2] = operand_value.b[1];
-		code[current_byte+3] = operand_value.b[2];
-		code[current_byte+4] = operand_value.b[3];
-		printCodigo(code,current_byte,5);
-		current_byte += 5;
-	}
-	else if(operand_type == 'v' || operand_type == 'p')
-	{
-		// movl valor(%ebp),%eax
-		code[current_byte] = 0x8B;
-		code[current_byte+1] = 0x45;
-		code[current_byte+2] = ebpOffsetValue(indexes_of_used_variables, num_of_used_variables, operand_type, operand_value.i);
-		printCodigo(code,current_byte,3);
-		current_byte += 3;
-	}
-
-	return current_byte;
-}
-
-static int computeSecondOperation(byte* code, int current_byte, int indexes_of_used_variables[], int* num_of_used_variables, 
-									char destination_operand_type, Value destination_operand_value, char operation_type, 
+static int computeOperation(byte* code, int current_byte, int indexes_of_used_variables[], int* num_of_used_variables,
+									char operation_type, 
+									char destination_operand_type, Value destination_operand_value, 
+									char first_operand_type, Value first_operand_value,
 									char second_operand_type, Value second_operand_value)
 {
-	if(second_operand_type == '$')
-	{
-		if(operation_type == '+')
-		{
-			// addl $valor,%eax
-			code[current_byte] = 0x05;
-			code[current_byte+1] = second_operand_value.b[0];
-			code[current_byte+2] = second_operand_value.b[1];
-			code[current_byte+3] = second_operand_value.b[2];
-			code[current_byte+4] = second_operand_value.b[3];
-			printCodigo(code,current_byte,5);
-			current_byte += 5;
-		}
-		else if(operation_type == '-')
-		{
-			// subl $valor,%eax
-			code[current_byte] = 0x2D;
-			code[current_byte+1] = second_operand_value.b[0];
-			code[current_byte+2] = second_operand_value.b[1];
-			code[current_byte+3] = second_operand_value.b[2];
-			code[current_byte+4] = second_operand_value.b[3];
-			printCodigo(code,current_byte,5);
-			current_byte += 5;
-		}
-		else if(operation_type == '*')
-		{
-			// imull $valor,%eax
-			code[current_byte] = 0x69;
-			code[current_byte+1] = 0xC0;
-			code[current_byte+2] = second_operand_value.b[0];
-			code[current_byte+3] = second_operand_value.b[1];
-			code[current_byte+4] = second_operand_value.b[2];
-			code[current_byte+5] = second_operand_value.b[3];
-			printCodigo(code,current_byte,6);
-			current_byte += 6;
-		}
-	}
-	else if(second_operand_type == 'v' || second_operand_type == 'p')
-	{
-		if(operation_type == '+')
-		{
-			// addl valor(%ebp),%eax
-			code[current_byte] = 0x03;
-			code[current_byte+1] = 0x45;
-			code[current_byte+2] = ebpOffsetValue(indexes_of_used_variables, num_of_used_variables, second_operand_type, second_operand_value.i);
-			printCodigo(code,current_byte,3);
-			current_byte += 3;
-		}
-		else if(operation_type == '-')
-		{
-			// subl valor(%ebp),%eax
-			code[current_byte] = 0x2B;
-			code[current_byte+1] = 0x45;
-			code[current_byte+2] = ebpOffsetValue(indexes_of_used_variables, num_of_used_variables, second_operand_type, second_operand_value.i);
-			printCodigo(code,current_byte,3);
-			current_byte += 3;
-		}
-		else if(operation_type == '*')
-		{
-			// imull valor(%ebp),%eax
-			code[current_byte] = 0x0F;
-			code[current_byte+1] = 0xAF;
-			code[current_byte+2] = 0x45;
-			code[current_byte+3] = ebpOffsetValue(indexes_of_used_variables,num_of_used_variables,second_operand_type,second_operand_value.i);
-			printCodigo(code,current_byte,4);
-			current_byte += 4;
-		}
-	}
-	else
-	{
-		printf("Error: Invalid operator '%c'.\n",operation_type);
-		exit(1);
-	}
+	if(first_operand_type == '$')
+		current_byte = _movl_value_eax(code, current_byte, first_operand_value);
+	else if(first_operand_type == 'v' || first_operand_type == 'p')
+		current_byte = _movl_valueebp_eax(code, current_byte, ebpOffsetValue(indexes_of_used_variables, num_of_used_variables, first_operand_type, first_operand_value.i));
 
-	// movl %eax, valor(%ebp)
-	code[current_byte] = 0x89;
-	code[current_byte+1] = 0x45;
-	code[current_byte+2] = ebpOffsetValue(indexes_of_used_variables,num_of_used_variables,destination_operand_type,destination_operand_value.i);
-	printCodigo(code,current_byte,3);
-	current_byte += 3;
+	if(second_operand_type == '$')
+		current_byte =  _operate_value_eax(code, current_byte, second_operand_value, operation_type);
+	else if(second_operand_type == 'v' || second_operand_type == 'p')
+		current_byte = _operate_valueebp_eax(code, current_byte, ebpOffsetValue(indexes_of_used_variables, num_of_used_variables, second_operand_type, second_operand_value.i), operation_type);
+
+	current_byte = _movl_eax_valueebp(code, current_byte, ebpOffsetValue(indexes_of_used_variables,num_of_used_variables,destination_operand_type,destination_operand_value.i));
 
 	return current_byte;
 }
 
 static int computeHeader(byte* code, int current_byte)
 {
-	//pushl %ebp
-	code[current_byte] = 0x55;
-	printCodigo(code,current_byte,1);
-	current_byte+=1;
-	
-	//movl %esp, %ebp
-	code[current_byte] = 0x89;
-	code[current_byte+1] = 0xE5;
-	printCodigo(code,current_byte,2);
-	current_byte+=2;
-	
-	// subl $20,%esp;
-	code[current_byte] = 0x83;
-	code[current_byte+1] = 0xEC;
-	code[current_byte+2] = 0x14;
-	printCodigo(code,current_byte,3);
-	current_byte+=3;
+	Value _TWENTY;
+	_TWENTY.i = 20;
+
+	current_byte = _pushl_ebp(code, current_byte);
+	current_byte = _movl_esp_ebp(code, current_byte);
+	current_byte = _subl_value_esp(code, current_byte,_TWENTY);
 
 	return current_byte;
 }
@@ -295,54 +351,22 @@ static int computeIfEq(byte* code, int current_byte, int indexes_of_used_variabl
 						char second_operand_type, Value second_operand_value, 
 						JumpReference array_of_jump_references[], int jump_destination_line, int current_line_of_code)
 {
+	Value _ZERO;
+	_ZERO.i = 0;
+
 	if(first_operand_type == '$')
-	{
-		// movl $valor,%eax
-		code[current_byte] = 0xB8;
-		code[current_byte+1] = first_operand_value.b[0];
-		code[current_byte+2] = first_operand_value.b[1];
-		code[current_byte+3] = first_operand_value.b[2];
-		code[current_byte+4] = first_operand_value.b[3];
-		printCodigo(code,current_byte,5);
-		current_byte += 5;
-	}
+		current_byte = _movl_value_eax(code, current_byte, first_operand_value);
 	else if(first_operand_type == 'v' || first_operand_type == 'p')
-	{
-		// movl valor(%ebp),%eax
-		code[current_byte] = 0x8B;
-		code[current_byte+1] = 0x45;
-		code[current_byte+2] = ebpOffsetValue(indexes_of_used_variables,num_of_used_variables,first_operand_type,first_operand_value.i);
-		printCodigo(code,current_byte,3);
-		current_byte += 3;
-	}
+		current_byte = _movl_valueebp_eax(code, current_byte, ebpOffsetValue(indexes_of_used_variables,num_of_used_variables,first_operand_type,first_operand_value.i));
 
 	if(second_operand_type == '$')
-	{
-		// movl $valor,%eax
-		code[current_byte] = 0x3D;
-		code[current_byte+1] = second_operand_value.b[0];
-		code[current_byte+2] = second_operand_value.b[1];
-		code[current_byte+3] = second_operand_value.b[2];
-		code[current_byte+4] = second_operand_value.b[3];
-		printCodigo(code,current_byte,5);
-		current_byte += 5;
-	}
+		current_byte = _cmpl_value_eax(code, current_byte, second_operand_value);
 	else if(second_operand_type == 'v' || second_operand_type == 'p')
-	{
-		// movl valor(%ebp),%eax
-		code[current_byte] = 0x3B;
-		code[current_byte+1] = 0x45;
-		code[current_byte+2] = ebpOffsetValue(indexes_of_used_variables,num_of_used_variables,second_operand_type,second_operand_value.i);
-		printCodigo(code,current_byte,3);
-		current_byte += 3;
-	}
+		current_byte = _cmpl_valueebp_eax(code, current_byte, ebpOffsetValue(indexes_of_used_variables,num_of_used_variables,second_operand_type,second_operand_value.i));
 
-	code[current_byte] = 0x0F;
-	code[current_byte+1] = 0x84;
 	array_of_jump_references[current_line_of_code].byte_to_write = current_byte + 2;
 	array_of_jump_references[current_line_of_code].jump_line_dest = jump_destination_line;
-	printCodigo(code,current_byte,6);
-	current_byte+=6;
+	current_byte = _je_value(code, current_byte, _ZERO);
 
 	return current_byte;
 }
@@ -438,25 +462,28 @@ funcp geracod (FILE *f)
 			fscanf(f," %c%d",&second_operand_type,&(second_operand_value.i));
 			printf(" %c%d\n\n",second_operand_type,second_operand_value.i);
 
-			if(first_operand_type == '$' || first_operand_type == 'v' || first_operand_type == 'p')
-			{
-				current_byte = computeFirstOperation(code, current_byte, indexes_of_used_variables, &num_of_used_variables, first_operand_type, first_operand_value);
-			}
-			else
+			if(first_operand_type != '$' && first_operand_type != 'v' && first_operand_type != 'p')
 			{
 				printf("Error: invalid symbol after ':=' found.\n");
 				exit(1);
 			}
-
-			if(second_operand_type == '$' || second_operand_type == 'v' || second_operand_type == 'p')
-			{
-				current_byte = computeSecondOperation(code,current_byte,indexes_of_used_variables,&num_of_used_variables,destination_operand_type,destination_operand_value,operation_type,second_operand_type,second_operand_value);
-			}
-			else
+			if(second_operand_type != '$' && second_operand_type != 'v' && second_operand_type != 'p')
 			{
 				printf("Error: invalid symbol after '%c' found.\n", operation_type);
 				exit(1);
 			}
+			if(operation_type != '+' && operation_type != '-' && operation_type != '*')
+			{
+				printf("Error: Invalid operator '%c'.\n",operation_type);
+				exit(1);
+			}
+			
+			current_byte = computeOperation(code, current_byte, indexes_of_used_variables, &num_of_used_variables,
+													operation_type,
+													destination_operand_type,destination_operand_value,
+													first_operand_type, first_operand_value,
+													second_operand_type, second_operand_value);
+
 		}
 		else
 		{
