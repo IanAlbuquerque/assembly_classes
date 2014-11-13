@@ -80,7 +80,6 @@ int computeReturnConst(FILE* f, byte* codigo,int byte_atual)
 int valorSubtrairEbp(FILE* f, int* used_vs, int* amount_used_vs, int var_num, byte* codigo, int* byte_atual)
 {
 	int var_index;
-	int i;
 	var_index = search(used_vs,*amount_used_vs,var_num);
 	if(var_index == -1)
 	{
@@ -95,6 +94,7 @@ int valorSubtrairEbp(FILE* f, int* used_vs, int* amount_used_vs, int var_num, by
 			var_index=*amount_used_vs;
 			(*amount_used_vs)++;
 
+			/*
 			printf("ATENCAO V%d NUNCA FOI USADO\n",var_num);
 			for (i = 0; i < 5; ++i)
 			{
@@ -113,6 +113,7 @@ int valorSubtrairEbp(FILE* f, int* used_vs, int* amount_used_vs, int var_num, by
 			codigo[*byte_atual+6] = 0; 
 			printCodigo(codigo,*byte_atual,7);
 			*byte_atual += 7;
+			*/
 		}
 	}
 	return ((byte)MAX_VARS - (byte)var_index)*4;
@@ -124,6 +125,48 @@ int valorAdicionarEbp( int param_num )
 	return 8 + 4*param_num; //para mim só faz sentido usar params 0,1,2,3,4...Tratar que o cara use os parametros
 }				//2,4,5,7,9 me parece bizarro...mas vc é aquariano.
 /* NOVO NEW NOUVEAU */
+int computeReturn(FILE* f, byte* codigo, int byte_atual, int* used_vs, int* amount_used_vs, char simbolo, Value valor_simbolo)
+{	if(simbolo == '$')
+	{
+		// movl $valor,%eax
+		codigo[byte_atual] = 0xB8;
+		codigo[byte_atual+1] = valor_simbolo.b[0];
+		codigo[byte_atual+2] = valor_simbolo.b[1];
+		codigo[byte_atual+3] = valor_simbolo.b[2];
+		codigo[byte_atual+4] = valor_simbolo.b[3];
+		printf("%d\n",valor_simbolo.i);
+		printCodigo(codigo,byte_atual,5);
+		byte_atual += 5;
+	}
+	else if(simbolo == 'v' || simbolo == 'p')
+	{
+		// movl valor(%ebp),%eax
+		codigo[byte_atual] = 0x8B;
+		codigo[byte_atual+1] = 0x45;
+		printCodigo(codigo,byte_atual,2);
+		if(simbolo == 'v') codigo[byte_atual+2] = ~valorSubtrairEbp(NULL,used_vs,amount_used_vs,valor_simbolo.i,codigo,&byte_atual)+1;
+		else codigo[byte_atual+2] = valorAdicionarEbp(valor_simbolo.i);
+		printCodigo(codigo,byte_atual,3);
+		byte_atual += 3;
+	}
+	//movl %ebp, %esp
+	codigo[byte_atual] = 0x89;
+	codigo[byte_atual+1] = 0xEC;
+	printCodigo(codigo,byte_atual,2);
+	byte_atual+=2;
+	
+	//popl %ebp
+	codigo[byte_atual] = 0x5D;
+	printCodigo(codigo,byte_atual,1);
+	byte_atual+=1;
+	
+	// ret
+	codigo[byte_atual] = 0xC3;
+	printCodigo(codigo,byte_atual,1);
+	byte_atual += 1;
+
+	return byte_atual;
+}
 
 int computeReturnVar(FILE* f, byte* codigo, int byte_atual, int* used_vs, int* amount_used_vs, int var_num)
 {
@@ -306,6 +349,139 @@ int computeSecondOperationConst(FILE* f, byte* codigo, int byte_atual, int* used
 }
 
 /* NOVO NEW NOUVEAU*/
+//computeSecondOperation(f,codigo,byte_atual,used_vs,&amount_used_vs,var_num,operacao,char2,v2);
+/*
+			fscanf(f," %d",&var_num);
+			printf("%d",var_num);
+			fscanf(f," := %c%d",&char1,(int*) valor_lido.b);
+			printf(" := %c%d",char1,valor_lido.i);
+
+			if(char1 == '$' || char1 == 'v' || char1 == 'p')
+			{
+				byte_atual = computeFirstOperation(codigo, byte_atual, used_vs, &amount_used_vs, char1, valor_lido);
+			}
+			else
+			{
+				printf("Error: invalid symbol after ':=' found.\n");
+				exit(1);
+			}
+
+			fscanf(f," %c",&operacao);
+			printf(" %c",operacao);
+
+			fscanf(f," %c%d",&char2,&(v2.i));
+			printf(" %c%d",char2,v2.i);
+
+			if(char2 == '$' || char2 == 'v' || char2 == 'p')
+			{
+				byte_atual = computeSecondOperation(f,codigo,byte_atual,used_vs,&amount_used_vs,char_lido,var_num,operacao,char2,v2);
+			}
+			e
+*/
+int computeSecondOperation(FILE* f, byte* codigo, int byte_atual, int* used_vs, int* amount_used_vs,char simbolo_dest, int var_num, char operacao, char simbolo, Value v2)
+{
+	printf("************** %c%d %c %c%d\n\n",simbolo_dest,var_num,operacao,simbolo,v2.i);
+	if(simbolo == '$')
+	{
+		if(operacao == '+')
+		{
+			// addl $valor,%eax
+			codigo[byte_atual] = 0x05;
+			codigo[byte_atual+1] = v2.b[0];
+			codigo[byte_atual+2] = v2.b[1];
+			codigo[byte_atual+3] = v2.b[2];
+			codigo[byte_atual+4] = v2.b[3];
+			printf("%d\n",v2.i);
+			printCodigo(codigo,byte_atual,5);
+			byte_atual += 5;
+		}
+		else if(operacao == '-')
+		{
+			// subl $valor,%eax
+			codigo[byte_atual] = 0x2D;
+			codigo[byte_atual+1] = v2.b[0];
+			codigo[byte_atual+2] = v2.b[1];
+			codigo[byte_atual+3] = v2.b[2];
+			codigo[byte_atual+4] = v2.b[3];
+			printf("[%d]\n",codigo[byte_atual+1]);
+			printCodigo(codigo,byte_atual,5);
+			byte_atual += 5;
+		}
+		else if(operacao == '*')
+		{
+			// imull $valor,%eax
+			codigo[byte_atual] = 0x69;
+			codigo[byte_atual+1] = 0xC0;
+			codigo[byte_atual+2] = v2.b[0];
+			codigo[byte_atual+3] = v2.b[1];
+			codigo[byte_atual+4] = v2.b[2];
+			codigo[byte_atual+5] = v2.b[3];
+			printf("[%d]\n",codigo[byte_atual+2]);
+			printCodigo(codigo,byte_atual,6);
+			byte_atual += 6;
+		}
+	}
+	else if(simbolo == 'v' || simbolo == 'p')
+	{
+		if(operacao == '+')
+		{
+			// addl valor(%ebp),%eax
+			codigo[byte_atual] = 0x03;
+			codigo[byte_atual+1] = 0x45;
+			if(simbolo == 'v') codigo[byte_atual+2] = ~valorSubtrairEbp(NULL,used_vs,amount_used_vs,v2.i,codigo,&byte_atual)+1;
+			else codigo[byte_atual+2] = valorAdicionarEbp(v2.i);
+			printCodigo(codigo,byte_atual,3);
+			byte_atual += 3;
+		}
+		else if(operacao == '-')
+		{
+			// subl valor(%ebp),%eax
+			codigo[byte_atual] = 0x2B;
+			codigo[byte_atual+1] = 0x45;
+			if(simbolo == 'v') codigo[byte_atual+2] = ~valorSubtrairEbp(NULL,used_vs,amount_used_vs,v2.i,codigo,&byte_atual)+1;
+			else codigo[byte_atual+2] = valorAdicionarEbp(v2.i);
+			printCodigo(codigo,byte_atual,3);
+			byte_atual += 3;
+		}
+		else if(operacao == '*')
+		{
+			// imull valor(%ebp),%eax
+			codigo[byte_atual] = 0x0F;
+			codigo[byte_atual+1] = 0xAF;
+			codigo[byte_atual+2] = 0x45;
+			if(simbolo == 'v') codigo[byte_atual+3] = ~valorSubtrairEbp(NULL,used_vs,amount_used_vs,v2.i,codigo,&byte_atual)+1;
+			else codigo[byte_atual+3] = valorAdicionarEbp(v2.i);
+			printCodigo(codigo,byte_atual,4);
+			byte_atual += 4;
+		}
+	}
+	else
+	{
+		printf("Error: invalid operator '%c'.\n",operacao);
+		exit(1);
+	}
+
+	printf("############ %c%d\n",simbolo_dest,var_num);
+	// movl %eax, valor(%ebp)
+	codigo[byte_atual] = 0x89;
+	codigo[byte_atual+1] = 0x45;
+	if(simbolo_dest == 'v') codigo[byte_atual+2] = ~valorSubtrairEbp(NULL,used_vs,amount_used_vs,var_num,codigo,&byte_atual)+1;
+	else codigo[byte_atual+2] = valorAdicionarEbp(var_num);
+	printCodigo(codigo,byte_atual,3);
+	byte_atual += 3;
+
+	/*
+	//movl %eax,-valor_subtrair_ebp(%ebp)
+	codigo[byte_atual] = 0x89;
+	codigo[byte_atual+1] = 0x45;
+	codigo[byte_atual+2] = ~valor_subtrair_ebp_dest + 1;
+	printCodigo(codigo,byte_atual,3);
+	byte_atual += 3;
+	*/
+
+	return byte_atual;
+}
+
 int computeSecondOperationVar(FILE* f, byte* codigo, int byte_atual, int* used_vs, int* amount_used_vs, int var_num, char operacao)
 {
 	byte valor_subtrair_ebp_dest;
@@ -559,8 +735,18 @@ funcp geracod (FILE *f)
 		}
 		else if(char_lido == 'r')
 		{
-			fscanf(f,"et %c",&char_lido);
-			printf("et %c",char_lido);
+			fscanf(f,"et %c%d",&char_lido,&valor_lido.i);
+			printf("et %c%d",char_lido,valor_lido.i);
+			if(char_lido == '$' || char_lido == 'v' || char_lido == 'p')
+			{
+				byte_atual = computeReturn(f,codigo,byte_atual,used_vs,&amount_used_vs,char_lido,valor_lido);
+			}
+			else
+			{
+				printf("Error: invalid symbol after 'ret' found.\n");
+				exit(1);
+			}
+			/*
 			if(char_lido == '$')
 			{
 				byte_atual = computeReturnConst(f,codigo,byte_atual);
@@ -576,25 +762,26 @@ funcp geracod (FILE *f)
 				printf("Error: invalid symbol after 'ret' found.\n");
 				exit(1);
 			}
+			*/
 		}
-		else if(char_lido == 'v')
+		else if(char_lido == 'v' || char_lido == 'p')
 		{
 			fscanf(f," %d",&var_num);
 			printf("%d",var_num);
-			fscanf(f," := %c%d",&char_lido,(int*) valor_lido.b);
-			printf(" := %c%d",char_lido,valor_lido.i);
+			fscanf(f," := %c%d",&char1,(int*) valor_lido.b);
+			printf(" := %c%d",char1,valor_lido.i);
 			/*
-			if(char_lido == '$')
+			if(char1 == '$')
 			{
 				// Atribuição de Constantes a Variáveis única
 				// byte_atual = computeAttConst(f,codigo,byte_atual,used_vs,&amount_used_vs,var_num);
 				byte_atual = computeFirstOperationConst(f,codigo,byte_atual);
 			}
-			else if(char_lido == 'v')
+			else if(char1 == 'v')
 			{
 				byte_atual = computeFirstOperationVar(f,codigo,byte_atual,used_vs,&amount_used_vs);
 			}
-			else if(char_lido == 'p')
+			else if(char1 == 'p')
 			{
 				printf("!!!!!!!!chegou aqui");
 				byte_atual = computeFirstOperationParam( f,codigo , byte_atual );
@@ -603,9 +790,9 @@ funcp geracod (FILE *f)
 			*/
 
 			/* NOVO NEW NOUVEAU*/
-			if(char_lido == '$' || char_lido == 'v' || char_lido == 'p')
+			if(char1 == '$' || char1 == 'v' || char1 == 'p')
 			{
-				byte_atual = computeFirstOperation(codigo, byte_atual, used_vs, &amount_used_vs, char_lido, valor_lido);
+				byte_atual = computeFirstOperation(codigo, byte_atual, used_vs, &amount_used_vs, char1, valor_lido);
 			}
 			else
 			{
@@ -616,17 +803,32 @@ funcp geracod (FILE *f)
 			fscanf(f," %c",&operacao);
 			printf(" %c",operacao);
 
-			fscanf(f," %c",&char_lido);
-			printf(" %c",char_lido);
-			if(char_lido == '$')
+			fscanf(f," %c%d",&char2,&(v2.i));
+			printf(" %c%d",char2,v2.i);
+
+
+			if(char2 == '$' || char2 == 'v' || char2 == 'p')
+			{
+				byte_atual = computeSecondOperation(f,codigo,byte_atual,used_vs,&amount_used_vs,char_lido,var_num,operacao,char2,v2);
+			}
+			else
+			{
+				printf("Error: invalid symbol after '%c' found.\n", operacao);
+				exit(1);
+			}
+			
+			/*
+			fscanf(f," %c",&char2);
+			printf(" %c",char2);
+			if(char2 == '$')
 			{
 				byte_atual = computeSecondOperationConst(f,codigo,byte_atual,used_vs,&amount_used_vs,var_num,operacao);
 			}
-			else if(char_lido == 'v')
+			else if(char2 == 'v')
 			{
 				byte_atual = computeSecondOperationVar(f,codigo,byte_atual,used_vs,&amount_used_vs,var_num,operacao);
 			}
-			else if(char_lido == 'p')
+			else if(char2 == 'p')
 			{
 				byte_atual = computeSecondOperationParam(f,codigo,byte_atual,used_vs,&amount_used_vs,var_num,operacao);
 			}
@@ -635,6 +837,8 @@ funcp geracod (FILE *f)
 				printf("Error: invalid symbol after '%c' found.\n",operacao);
 				exit(1);
 			}
+			*/
+
 		}
 		else
 		{

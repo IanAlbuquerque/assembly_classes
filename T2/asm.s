@@ -108,3 +108,11 @@ GO2:
 	cmpl $0xabcdef,%eax;
 	cmpl $0xabcdef,%eax;
 	cmpl $0xabcdef,%eax;
+
+	movl %eax,-20(%ebp);
+
+	movl -20(%ebp),%eax;
+	movl %ebp, %esp
+	popl %ebp
+	ret
+	
