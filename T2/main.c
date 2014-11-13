@@ -24,15 +24,7 @@ int main(int argn, char* argc[])
 		exit(1);
 	}
 
-	printf("#######################################\n");
-	printf("Inicio Compilacao\n");
-	printf("#######################################\n");
-
 	code = geracod(input_file);
-	
-	printf("#######################################\n");
-	printf("Compilacao Concluida\n");
-	printf("#######################################\n");
 
 	printf("Enter the number of paramaters:\n");
 	scanf("%d",&number_of_parameters);
