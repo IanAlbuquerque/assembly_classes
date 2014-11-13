@@ -101,6 +101,27 @@ GO:
 	cmpl $0xabcdef,%eax;
 	cmpl $0xabcdef,%eax;
 	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
+	cmpl $0xabcdef,%eax;
 GO2:
 	cmpl $0xabcdef,%eax;
 	cmpl $0xabcdef,%eax;
