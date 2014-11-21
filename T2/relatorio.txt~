@@ -1,0 +1,74 @@
+Relatório do segundo trabalho de INF1018
+========================================
+	Integrantes: Eric Grinstein 1310428 e Ian Albuquerque 1310451
+
+
+
+Seção 1: Erros/bugs conhecidos
+-------------------------------------------
+Não foram detectados erros no código gerado.
+
+
+
+Seção 2: Funcionalidades e decisões tomadas pelo grupo
+------------------------------------------------------
+O programa criado é capaz de ler arquivos com a sintaxe 'Minima'
+e retornar um ponteiro para a função que o código (Minima) representa.
+As funcionalidades suportadas pelo gerador são:
+
+* O código Minima pode conter até 5 variáveis, podendo ser nomeadas de v0 a v9. 
+	É possível que o programador de Minima escolha variáveis não sequenciais (por exemplo, v3, v4 e v9).
+	Caso o usuário programador utilize mais de 5 variáveis, o programa aborta acusando tal violação.
+* Variáveis (v0 a v9) podem ser inicializadas como a soma, diferença ou produto da combinação de 2 (e apenas 2) dos tipos abaixo:
+	* Parâmetros (p0 a p4)
+	* Variáveis (incluindo ela própria)
+	* Números inteiros, chamados de constantes (denotados por $N, N sendo o número)
+* Caso uma variável seja usada antes de inicializada, conterá lixo de memória. É tarefa do programador 
+	se proteger contra tal evento.
+* O código Minima pode conter até 5 parâmetros, nomeados de p0 a p4. Caso o programador utilize menos de 5 parâmetros,
+	deverá utilizar os primeiros. Tal restrição não está presente, como visto acima, na utilização de variáveis.
+* Parâmetros podem ter seu valor mudado, da mesma forma que variáveis (operação entre 2 parâmetros/variáveis/constantes).
+* A função 'ret' é capaz de retornar um parâmetro, constante ou parâmetro.
+* A função 'ifeq' recebe 2 valores (parametros/constante/variável) e o número de uma linha do código Minima. Caso os dois primeiros valores 
+	coincidam, o programa passa o controle para a linha recebida.
+
+Seção 3: Testes realizados
+--------------------------
+O programa foi testado utilizando as funções disponibilizadas
+no site da disciplina. O programa portanto foi capaz de gerar, a partir 
+de código Minima, as funções:
+	* fat(n) (fatorial)
+	* teste de igualdade
+	* (a * (b + c))
+
+Seção 4: Comentário de pontos importantes do código
+---------------------------------------------------------
+A cada linha linha Minima lida, são escritos seus respectivos códigos de máquina no vetor
+de bytes chamado 'code'. Por exemplo: caso seja lida a linha Minima 'ret $12' deverá ser adicionado ao vetor os bytes b8 0c 00 00 00 e c3 (os 5 primeiros significam em assembly 'movl $12, %eax' e o último (c3) significa 'ret'.). O vetor tem tamanho de 50 vezes a maior instrução 
+possível em mínima, visto que o código pode ter no máximo 50 linhas.
+
+As operações de soma, divisão e multiplicação funcionam da seguinte maneira: o primeiro valor é colocado no registrador %eax. Após isso, a operação é feita e seu resultado é guardado em tal registrador. Por último, o conteúdo de %eax é movido ou para a pilha, seja para cima de %ebp (no caso de parâmetro) ou abaixo (no caso de variável local).
+
+A comparação (ifeq) só pode ser finalizada após o término da leitura, visto que deve-se saber a distância até a linha de destino, que pode ainda não ter sido lido. Foi criado um vetor auxiliar "ArrayOfJumpReferences", que guarda structs do tipo JumpReference, que contém o número do byte que deverá conter o endereço a ser 'pulado' e a linha de destino correspondente ao código Minima.
+Após a leitura de todas linhas, são calculados os reais valores de jump, a diferença entre o endereço da linha onde o jump foi chamado e o destino do jump. 
+
+
+
+
+Seção 5: Breve explicação das funções e estruturas de geracod.c
+---------------------------------------------------------------
+
+Union value: Usada para facilitar a escrita de inteiros em modo little endian. 
+
+static byte ebpOffsetValue: recebe o índice de um parâmetro/variável e calcula o valor que deve 
+							ser adicionado/subtraído (respectivamente) do registrador ebp.
+static int generateOpcodeReturn: Gera o código de máquina para colocar o valor após o comando mínima 'ret' no registrador %eax,
+				 seja ele um parâmetro, variável ou constante, para que possa ser retornado.
+static int generateOpcodeAtt: Gera o código de máquina para colocar valor do primeiro operando (da soma, multiplicação ou divisão) no 			              registrador %eax, seja ele um parâmetro, variável ou constante. Após isso, gera o código para somar o segundo
+			      operando ao valor no registrador %eax e mover o resultado ao parâmetro ou variável do lado esquerdo na 				      expressão.
+static int generateOpcodeHeader: Gera o código de máquina para alocar espaço (20 bytes) para as variáveis locais.
+static int generateOpcodeIfEqual: Gera o código que computa o comando minima 'ifeq'.
+
+
+
+
